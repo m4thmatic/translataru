@@ -22,9 +22,10 @@
 addon.author   = 'Mathmatic';
 addon.name     = 'translataru';
 addon.desc     = 'Convert text in double brackets [[ ]] to autotranslate messages';
-addon.version  = '1.0';
+addon.version  = '1.1';
 
 local autoDict = require('dictionary');
+local encode = require('encoding');
 
 local function autotranslateBytes(id)
     local hexValue = string.format("%04X", id) -- Format ID as a 4-digit hex
@@ -35,25 +36,19 @@ end
 
 --------------------------------------------------------------------
 ashita.events.register('text_out', 'text_in_cb', function (e)
-    --Search for anything inside a triple [[ ]]
+
+    --Search for anything inside a double [[ ]]
     local regexPattern = "%[%[(.-)%]%]";
 
-    -- Search for the dictionary with a matching English value
-    -- If found, replace [[[msg]]] with the proper byte code to display the autotranslator message
-    -- Otherwise return the original text
-    local output = e.message:gsub(regexPattern, function(match)
-        for _, entry in pairs(autoDict) do
-            --if (entry.en:lower() == match:lower()) or (entry.ja == match) then
-            if (entry.en:lower() == match:lower()) then --case insensitive
-                return autotranslateBytes(entry.id)
-            end
-            
-            --if (entry.ja == match) then
-            --    return autotranslateBytes(entry.id)
-            --end
+    local output = e.message:gsub(regexPattern, function(keyStr)
+        if autoDict.english[keyStr:lower()] then --Check for English match (case insensitive)
+            return autotranslateBytes(autoDict.english[keyStr:lower()]);
+        elseif autoDict.japanese[keyStr] then --Check for Japanese match
+            return autotranslateBytes(autoDict.japanese[keyStr]);
+        else
+            return keyStr
         end
-        return "[[" .. match .. "]]"
     end)
-   
+
     e.message_modified = output
 end);
